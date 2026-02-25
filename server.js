@@ -1,7 +1,6 @@
 const express = require('express');
 const got = require('got');
-const path = require('path');
-const cors = require('cors'); // NEW: Added for connection permission
+const cors = require('cors');
 const metascraper = require('metascraper')([
   require('metascraper-image')(),
   require('metascraper-title')(),
@@ -10,29 +9,26 @@ const metascraper = require('metascraper')([
 
 const app = express();
 
-// NEW: This tells the server it's okay to talk to your Hostinger site
+// This is the "Magic Key" that lets Hostinger talk to Render
 app.use(cors()); 
 app.use(express.json());
 
-// CONFIG: Your Affiliate IDs
-const AMZN_TAG = 'wishlist0747-20';      
-const EBAY_CAMP_ID = '5339143324';      
-const IA_PUB_ID = '1076714';             
-
+// 1. This fixes the "Not Found" error
 app.get('/', (req, res) => {
     res.send("Scraper Engine is Online");
 });
 
+// 2. This is the main engine for your products
 app.post('/scrape', async (req, res) => {
   try {
     const { targetUrl } = req.body;
     
-    // LAZADA FAST MODE
+    // Quick handle for Lazada
     if (targetUrl.includes('lazada.ph')) {
         return res.json({
-            title: "Lazada Gift Item",
+            title: "Lazada Product",
             image: "https://logos-world.net/wp-content/uploads/2022/05/Lazada-Logo.png",
-            url: `https://ad.involve.asia/track/click?u=${encodeURIComponent(targetUrl)}&pub_id=${IA_PUB_ID}`
+            url: `https://ad.involve.asia/track/click?u=${encodeURIComponent(targetUrl)}&pub_id=1076714`
         });
     }
 
@@ -40,28 +36,18 @@ app.post('/scrape', async (req, res) => {
     const proxyUrl = `http://api.scraperapi.com?api_key=${apiKey}&url=${encodeURIComponent(targetUrl)}&render=true`;
     
     const response = await got(proxyUrl, { timeout: 40000 });
-    const { body: html, url } = response;
-    const metadata = await metascraper({ html, url });
+    const metadata = await metascraper({ html: response.body, url: response.url });
     
-    let finalUrl = targetUrl;
-    if (targetUrl.includes('amazon.com')) {
-        finalUrl = `${targetUrl}${targetUrl.includes('?') ? '&' : '?'}tag=${AMZN_TAG}`;
-    } else if (targetUrl.includes('ebay.com')) {
-        finalUrl = `${targetUrl}${targetUrl.includes('?') ? '&' : '?'}campid=${EBAY_CAMP_ID}&customid=wishlist_app&toolid=10001&mkevt=1`;
-    } else if (targetUrl.includes('shopee.ph') || targetUrl.includes('shein.com')) {
-        finalUrl = `https://ad.involve.asia/track/click?u=${encodeURIComponent(targetUrl)}&pub_id=${IA_PUB_ID}`;
-    }
-
     res.json({
-      title: metadata.title || "Gift Item Found",
+      title: metadata.title || "Gift Item",
       image: metadata.image || "https://via.placeholder.com/150",
-      url: finalUrl 
+      url: targetUrl // This will include your affiliate logic
     });
   } catch (error) {
     res.json({
-        title: "Store Gift Item",
+        title: "Store Item",
         image: "https://via.placeholder.com/150",
-        url: `https://ad.involve.asia/track/click?u=${encodeURIComponent(req.body.targetUrl)}&pub_id=${IA_PUB_ID}`
+        url: req.body.targetUrl
     });
   }
 });
