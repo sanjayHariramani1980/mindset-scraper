@@ -1,6 +1,7 @@
 const express = require('express');
 const got = require('got');
-const path = require('path'); // Needed to find the HTML file
+const path = require('path');
+const cors = require('cors'); // NEW: Added for connection permission
 const metascraper = require('metascraper')([
   require('metascraper-image')(),
   require('metascraper-title')(),
@@ -8,16 +9,18 @@ const metascraper = require('metascraper')([
 ]);
 
 const app = express();
+
+// NEW: This tells the server it's okay to talk to your Hostinger site
+app.use(cors()); 
 app.use(express.json());
 
-// CONFIG: Your IDs
+// CONFIG: Your Affiliate IDs
 const AMZN_TAG = 'wishlist0747-20';      
 const EBAY_CAMP_ID = '5339143324';      
 const IA_PUB_ID = '1076714';             
 
-// Serve the index.html from the ROOT folder
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.send("Scraper Engine is Online");
 });
 
 app.post('/scrape', async (req, res) => {
@@ -63,6 +66,5 @@ app.post('/scrape', async (req, res) => {
   }
 });
 
-// Important: Hostinger automatically assigns a port, so we use process.env.PORT
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
